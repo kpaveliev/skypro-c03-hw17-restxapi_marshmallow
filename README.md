@@ -17,7 +17,11 @@
 3. Step 3 - update view to show films of a specific director
 4. Step 4 - update view to show films of a specific genre
 
-**Asterix HW - In progress**
+**Asterix HW - Done**
+
+1. Step 1 - movies/?director_id=xx&genre_id=xx
+2. Step 2 - POST, PUT, DELETE for directors
+3. Step 3 - POST, PUT, DELETE for genres
 
 Kirill Paveliev\
 May 2022

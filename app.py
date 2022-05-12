@@ -23,7 +23,7 @@ director_schema = DirectorSchema()
 genre_schema = GenreSchema()
 
 
-# Define routes and class-based view functions
+# Define routes and class-based view functions for Movies
 @movies_ns.route('/')
 class MoviesView(Resource):
 
@@ -32,21 +32,31 @@ class MoviesView(Resource):
         director_id = request.args.get('director_id')
         genre_id = request.args.get('genre_id')
 
-        # Respond with movies with the specified director_id if found
+        # Respond with the movies with the specified director_id and genre_id if found
+        if director_id and genre_id:
+            movies_found = Movie.query.filter(Movie.director_id == int(director_id),
+                                              Movie.genre_id == int(genre_id)).all()
+            if not movies_found:
+                return f"No movies found with the director_id: {director_id}" \
+                       f" and the genre_id: {genre_id}", 204
+            else:
+                return movies_schema.dump(movies_found), 200
+
+        # Respond with the movies with the specified director_id if found
         if director_id:
             movies_found = Movie.query.filter(Movie.director_id == int(director_id)).all()
-            if movies_found:
-                return movies_schema.dump(movies_found), 200
+            if not movies_found:
+                return f"No movies found with the director_id: {director_id}", 204
             else:
-                return "", 204
+                return movies_schema.dump(movies_found), 200
 
-        # Respond with movies with the specified genre_id if found
+        # Respond with the movies with the specified genre_id if found
         if genre_id:
             movies_found = Movie.query.filter(Movie.genre_id == int(genre_id)).all()
-            if movies_found:
-                return movies_schema.dump(movies_found), 200, {'Content-type': 'application/json; charset=utf-8'}
+            if not movies_found:
+                return f"No movies found with the genre_id: {genre_id}", 204
             else:
-                return "", 204
+                return movies_schema.dump(movies_found), 200
 
         # Respond with all the movies if no arguments passed
         else:
@@ -62,6 +72,7 @@ class MovieView(Resource):
         return movie_schema.dump(movie_uid), 200
 
 
+# Define routes and class-based view functions for Directors
 @directors_ns.route('/')
 class DirectorsView(Resource):
 
@@ -99,24 +110,23 @@ class DirectorView(Resource):
 
     def put(self, uid):
         # Get data from request and load object
-        data = director_schema.load(request.json)
-        director = Director.query.get(uid)
+        try:
+            data = director_schema.load(request.json)
+            director = Director.query.get(uid)
+            # Throw not found if uid not found
+            if not director:
+                return f"Genre with the id: {uid} not found", 404
 
-        # Throw not found if uid not found
-        if not director:
-            return f"Director with the id: {uid} not found", 404
+        # Throw bad request if wrong fields were passed
+        except ValidationError as e:
+            return f"{e}", 400
 
+        # Update object
         else:
-            try:
-                director.name = data['name']
-            # Throw bad request if wrong fields were passed
-            except ValidationError as e:
-                return f"{e}", 400
-            # Update object
-            else:
-                db.session.commit()
-                db.session.close()
-                return f"Director with id: {uid} successfully updated", 201
+            director.name = data['name']
+            db.session.commit()
+            db.session.close()
+            return f"Director with id: {uid} successfully updated", 201
 
     def delete(self, uid):
         # Find required row
@@ -132,6 +142,7 @@ class DirectorView(Resource):
             return f"Director with id: {uid} successfully deleted", 201
 
 
+# Define routes and class-based view functions for Genres
 @genres_ns.route('/')
 class GenresView(Resource):
 
