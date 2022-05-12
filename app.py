@@ -1,41 +1,57 @@
-# app.py
-
 from flask import Flask, request
 from flask_restx import Api, Resource
-from flask_sqlalchemy import SQLAlchemy
-from marshmallow import Schema, fields
+from models import db, Movie, Director, Genre, MovieSchema
 
+# Initiate app, load config, connect database
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+app.config.from_pyfile('config.py')
+db.init_app(app)
+
+# Define namespaces
+api = Api(app)
+movies_ns = api.namespace('movies')
+
+# Define marshmallow schemas
+movie_schema = MovieSchema()
+movies_schema = MovieSchema(many=True)
 
 
-class Movie(db.Model):
-    __tablename__ = 'movie'
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(255))
-    description = db.Column(db.String(255))
-    trailer = db.Column(db.String(255))
-    year = db.Column(db.Integer)
-    rating = db.Column(db.Float)
-    genre_id = db.Column(db.Integer, db.ForeignKey("genre.id"))
-    genre = db.relationship("Genre")
-    director_id = db.Column(db.Integer, db.ForeignKey("director.id"))
-    director = db.relationship("Director")
+# Define routes and class-based view functions
+@movies_ns.route('/')
+class MoviesView(Resource):
+    def get(self):
+        # Get arguments from request
+        director_id = request.args.get('director_id')
+        genre_id = request.args.get('genre_id')
 
-class Director(db.Model):
-    __tablename__ = 'director'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
+        # Respond with movies with the specified director_id if found
+        if director_id:
+            movies_found = Movie.query.filter(Movie.director_id == int(director_id)).all()
+            if movies_found:
+                return movies_schema.dump(movies_found), 200
+            else:
+                return "", 204
+
+        # Respond with movies with the specified genre_id if found
+        if genre_id:
+            movies_found = Movie.query.filter(Movie.genre_id == int(genre_id)).all()
+            if movies_found:
+                return movies_schema.dump(movies_found), 200
+            else:
+                return "", 204
+
+        # Respond with all the movies if no arguments passed
+        else:
+            movies_all = Movie.query.all()
+            return movies_schema.dump(movies_all), 200
 
 
-class Genre(db.Model):
-    __tablename__ = 'genre'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-
+@movies_ns.route('/<int:uid>')
+class MovieView(Resource):
+    def get(self, uid):
+        movie_uid = Movie.query.get(uid)
+        return movie_schema.dump(movie_uid), 200
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
