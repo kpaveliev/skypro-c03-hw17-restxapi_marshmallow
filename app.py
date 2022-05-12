@@ -1,6 +1,5 @@
 from flask import Flask, request
 from flask_restx import Api, Resource
-from sqlalchemy.orm.exc import UnmappedInstanceError
 from marshmallow.exceptions import ValidationError
 from models import db, Movie, Director, Genre, MovieSchema, DirectorSchema, GenreSchema
 
@@ -210,7 +209,6 @@ class GenreView(Resource):
             db.session.commit()
             db.session.close()
             return f"Genre with id: {uid} successfully deleted", 201
-
 
 
 if __name__ == '__main__':
