@@ -2,6 +2,7 @@
 ### Python template
 #Test files
 test.py
+test.db
 source/
 
 # Byte-compiled / optimized / DLL files
