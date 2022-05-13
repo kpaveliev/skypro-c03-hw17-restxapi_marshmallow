@@ -1,6 +1,7 @@
 from flask import Flask, request
 from flask_restx import Api, Resource
-from marshmallow.exceptions import ValidationError
+from marshmallow import ValidationError
+from flask_restx.representations import output_json
 from models import db, Movie, Director, Genre, MovieSchema, DirectorSchema, GenreSchema
 
 # Initiate app, load config, connect database
@@ -11,6 +12,7 @@ db.init_app(app)
 
 # Define namespaces
 api = Api(app)
+api.representations = {'application/json; charset=utf-8': output_json}
 movies_ns = api.namespace('movies')
 directors_ns = api.namespace('directors')
 genres_ns = api.namespace('genres')
@@ -28,13 +30,23 @@ class MoviesView(Resource):
 
     def get(self):
         # Get arguments from request
-        director_id = request.args.get('director_id')
-        genre_id = request.args.get('genre_id')
+        director_id = request.args.get('director_id', type=int)
+        genre_id = request.args.get('genre_id', type=int)
 
         # Respond with the movies with the specified director_id and genre_id if found
         if director_id and genre_id:
-            movies_found = Movie.query.filter(Movie.director_id == int(director_id),
-                                              Movie.genre_id == int(genre_id)).all()
+            movies_found = db.session\
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director'))\
+                .join(Movie.genre)\
+                .join(Movie.director)\
+                .filter(Movie.genre_id == genre_id, Movie.director_id == director_id)\
+                .all()
             if not movies_found:
                 return f"No movies found with the director_id: {director_id}" \
                        f" and the genre_id: {genre_id}", 204
@@ -43,7 +55,18 @@ class MoviesView(Resource):
 
         # Respond with the movies with the specified director_id if found
         if director_id:
-            movies_found = Movie.query.filter(Movie.director_id == int(director_id)).all()
+            movies_found = db.session \
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director')) \
+                .join(Movie.genre) \
+                .join(Movie.director) \
+                .filter(Movie.director_id == director_id) \
+                .all()
             if not movies_found:
                 return f"No movies found with the director_id: {director_id}", 204
             else:
@@ -51,7 +74,18 @@ class MoviesView(Resource):
 
         # Respond with the movies with the specified genre_id if found
         if genre_id:
-            movies_found = Movie.query.filter(Movie.genre_id == int(genre_id)).all()
+            movies_found = db.session\
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director'))\
+                .join(Movie.genre)\
+                .join(Movie.director)\
+                .filter(Movie.genre_id == genre_id)\
+                .all()
             if not movies_found:
                 return f"No movies found with the genre_id: {genre_id}", 204
             else:
@@ -59,7 +93,17 @@ class MoviesView(Resource):
 
         # Respond with all the movies if no arguments passed
         else:
-            movies_all = Movie.query.all()
+            movies_all = db.session\
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director'))\
+                .join(Movie.genre)\
+                .join(Movie.director)\
+                .all()
             return movies_schema.dump(movies_all), 200
 
 
