@@ -1,19 +1,27 @@
 from flask import request
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 from marshmallow import ValidationError
 from models import db, Director, DirectorSchema
 
 # Declare namespace object
-directors_ns = Namespace('directors', description='Views for directors')
+api = Namespace('directors', description='Views for directors')
 
 # Define marshmallow schemas
 director_schema = DirectorSchema()
 
+# Define api model for documentation
+director_model = api.model('Director', {
+    'id': fields.Integer(required=True, description="Identifier"),
+    'name': fields.String(required=True, description="Full name")
+})
+
 
 # Define routes and class-based view functions for Directors
-@directors_ns.route('')
+@api.route('')
 class DirectorsView(Resource):
-
+    @api.doc(description='Add new director', body=director_model)
+    @api.response(201, 'Created')
+    @api.response(400, 'ValidationError')
     def post(self):
         # Get data from request and create object
         try:
@@ -31,9 +39,11 @@ class DirectorsView(Resource):
             return "Data added", 201
 
 
-@directors_ns.route('<int:uid>')
+@api.route('<int:uid>')
 class DirectorView(Resource):
-
+    @api.doc(description='Get director by id')
+    @api.response(200, 'Success', director_model)
+    @api.response(404, 'Not found')
     def get(self, uid):
         # Find required row
         director = Director.query.get(uid)
@@ -46,6 +56,10 @@ class DirectorView(Resource):
         else:
             return director_schema.dump(director), 200
 
+    @api.doc(description='Update director by id', body=director_model)
+    @api.response(200, 'Success')
+    @api.response(400, 'Validation error')
+    @api.response(404, 'Not found')
     def put(self, uid):
         # Get data from request and load object
         try:
@@ -66,6 +80,9 @@ class DirectorView(Resource):
             db.session.close()
             return f"Director with id: {uid} successfully updated", 201
 
+    @api.doc(description='Remove director by id')
+    @api.response(204, 'No content')
+    @api.response(404, 'Not found')
     def delete(self, uid):
         # Find required row
         director = Director.query.get(uid)
@@ -77,4 +94,4 @@ class DirectorView(Resource):
             db.session.delete(director)
             db.session.commit()
             db.session.close()
-            return f"Director with id: {uid} successfully deleted", 201
+            return "", 204

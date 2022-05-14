@@ -1,19 +1,27 @@
 from flask import request
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 from marshmallow import ValidationError
 from models import db, Genre, GenreSchema
 
 # Declare namespace object
-genres_ns = Namespace('genres', description='Views for genres')
+api = Namespace('genres', description='Views for genres')
 
 # Define marshmallow schemas
 genre_schema = GenreSchema()
 
+# Define api model for documentation
+genres_model = api.model('Genre', {
+    'id': fields.Integer(required=True, description="Identifier"),
+    'name': fields.String(required=True, description="Genre name")
+})
+
 
 # Define routes and class-based view functions for Genres
-@genres_ns.route('')
+@api.route('')
 class GenresView(Resource):
-
+    @api.doc(description='Add new genre', body=genres_model)
+    @api.response(201, 'Created')
+    @api.response(400, 'ValidationError')
     def post(self):
         # Get data from request and create object
         try:
@@ -31,9 +39,11 @@ class GenresView(Resource):
             return "Data added", 201
 
 
-@genres_ns.route('<int:uid>')
+@api.route('<int:uid>')
 class GenreView(Resource):
-
+    @api.doc(description='Get genre by id')
+    @api.response(200, 'Success', genres_model)
+    @api.response(404, 'Not found')
     def get(self, uid):
         # Find required row
         genre = Genre.query.get(uid)
@@ -46,6 +56,10 @@ class GenreView(Resource):
         else:
             return genre_schema.dump(genre), 200
 
+    @api.doc(description='Update genre by id', body=genres_model)
+    @api.response(200, 'Success')
+    @api.response(400, 'Validation error')
+    @api.response(404, 'Not found')
     def put(self, uid):
         # Get data from request and load object
         try:
@@ -66,6 +80,9 @@ class GenreView(Resource):
             db.session.close()
             return f"Genre with id: {uid} successfully updated", 201
 
+    @api.doc(description='Remove genre by id')
+    @api.response(204, 'No content')
+    @api.response(404, 'Not found')
     def delete(self, uid):
         # Find required row
         genre = Genre.query.get(uid)
@@ -77,4 +94,4 @@ class GenreView(Resource):
             db.session.delete(genre)
             db.session.commit()
             db.session.close()
-            return f"Genre with id: {uid} successfully deleted", 201
+            return f"", 204
