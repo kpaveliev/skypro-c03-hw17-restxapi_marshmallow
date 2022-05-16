@@ -111,6 +111,56 @@ class MoviesView(Resource):
             return movies_schema.dump(movies_all), 200
 
 
+# Define routes and class-based view functions for Movies
+@api.route('pages/')
+@api.param('page', 'Page number')
+class MoviesView(Resource):
+    @api.doc(description='Get movies for specific page, 10 films per page')
+    @api.response(200, 'Success', movie_model)
+    @api.response(404, 'Not found')
+    def get(self):
+        # Get arguments from request
+        page = request.args.get('page', type=int)
+        page_size = 10
+
+        # Respond with the movies with the specified director_id if found
+        if page:
+            movies_found = db.session \
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director')) \
+                .join(Movie.genre) \
+                .join(Movie.director) \
+                .limit(page_size) \
+                .offset(page*page_size - page_size) \
+                .all()
+            if not movies_found:
+                return f"No movies for the page: {page}", 404
+            else:
+                return movies_schema.dump(movies_found), 200
+
+
+        # Respond with all the movies if no arguments passed
+        else:
+            movies_all = db.session\
+                .query(Movie.id,
+                       Movie.title,
+                       Movie.description,
+                       Movie.trailer,
+                       Movie.rating,
+                       Genre.name.label('genre'),
+                       Director.name.label('director'))\
+                .join(Movie.genre)\
+                .join(Movie.director)\
+                .all()
+            return movies_schema.dump(movies_all), 200
+
+
+
 @api.route('<int:uid>')
 @api.param('uid', 'Movie identifier')
 class MovieView(Resource):

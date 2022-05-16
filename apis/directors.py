@@ -67,7 +67,7 @@ class DirectorView(Resource):
             director = Director.query.get(uid)
             # Throw not found if uid not found
             if not director:
-                return f"Genre with the id: {uid} not found", 404
+                return f"Director with the id: {uid} not found", 404
 
         # Throw bad request if wrong fields were passed
         except ValidationError as e:
@@ -75,7 +75,7 @@ class DirectorView(Resource):
 
         # Update object
         else:
-            director.name = data['name']
+            db.session.query(Director).filter(Director.id == uid).update(data)
             db.session.commit()
             db.session.close()
             return f"Director with id: {uid} successfully updated", 201
